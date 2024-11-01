@@ -1,7 +1,47 @@
 import scapy.all as scapy
 import random
 from models.ICMPResponse import ICMPResponse
+from models.TCPResponse import TCPResponse
+import time
 
+def tcp_sequence_test(target_ip, open_port):
+    test_results = TCPResponse()
+
+    packets = [
+        scapy.IP(dst=target_ip) /
+        scapy.TCP(dport=open_port, flags="S", window=1, options=[("WScale", 10), ("NOP", None), ("MSS", 1460), 
+                                                                 ("Timestamp", (0xFFFFFFFF, 0)), ("SAckOK", "")]),
+
+        scapy.IP(dst=target_ip) /
+        scapy.TCP(dport=open_port, flags="S", window=63, options=[("MSS", 1400), ("WScale", 0), ("SAckOK", ""), 
+                                                                  ("Timestamp", (0xFFFFFFFF, 0)), ("EOL", None)]),
+
+        scapy.IP(dst=target_ip) /
+        scapy.TCP(dport=open_port, flags="S", window=4, options=[("Timestamp", (0xFFFFFFFF, 0)), ("NOP", None), 
+                                                                 ("NOP", None), ("WScale", 5), ("NOP", None), 
+                                                                 ("MSS", 640)]),
+
+        scapy.IP(dst=target_ip) /
+        scapy.TCP(dport=open_port, flags="S", window=4, options=[("SAckOK", ""), ("Timestamp", (0xFFFFFFFF, 0)), 
+                                                                 ("WScale", 10), ("EOL", None)]),
+
+        scapy.IP(dst=target_ip) /
+        scapy.TCP(dport=open_port, flags="S", window=16, options=[("MSS", 536), ("SAckOK", ""), 
+                                                                  ("Timestamp", (0xFFFFFFFF, 0)), ("WScale", 10), 
+                                                                  ("EOL", None)]),
+
+        scapy.IP(dst=target_ip) /
+        scapy.TCP(dport=open_port, flags="S", window=512, options=[("MSS", 265), ("SAckOK", ""), 
+                                                                   ("Timestamp", (0xFFFFFFFF, 0))])
+    ]
+
+    for i, packet in enumerate(packets):
+        response = scapy.sr1(packet, timeout=2, verbose=0)
+        test_results.save_response(response, probe_number=i + 1)
+        time.sleep(0.1)
+
+    print(test_results)
+    
 def icmp_echo(target_ip):
     ie_results = ICMPResponse()
     
@@ -41,8 +81,10 @@ def icmp_echo(target_ip):
     
 def main():
     # TODO: Add input from user
-    target_ip = "127.0.0.1"
-    icmp_echo(target_ip)
+    target_ip = "10.0.0.9"
+    open_port = 80
+    # icmp_echo(target_ip)
+    tcp_sequence_test(target_ip, open_port)
 
 if __name__ == '__main__':
     main()
